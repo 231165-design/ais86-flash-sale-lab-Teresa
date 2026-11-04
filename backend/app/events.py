@@ -35,6 +35,7 @@ def build_order_created_event(
     order_id: uuid.UUID,
     items: list[dict[str, Any]],
     created_at: datetime,
+    total_cents: int,
 ) -> dict[str, Any]:
     return {
         "specversion": "1.0",
@@ -49,6 +50,7 @@ def build_order_created_event(
                 {"product_id": item["product_id"], "quantity": item["quantity"]}
                 for item in items
             ],
+            "total_cents": total_cents,
         },
     }
 

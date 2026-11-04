@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict, Field, StrictInt, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, StrictInt, model_validator
 
 
 class OrderItemIn(BaseModel):
@@ -11,14 +11,7 @@ class OrderItemIn(BaseModel):
         max_length=64,
         pattern=r"^[A-Za-z0-9][A-Za-z0-9_-]*$",
     )
-    quantity: int = Field(ge=1, le=5)
-
-    @field_validator("quantity", mode="before")
-    @classmethod
-    def validate_json_number_type(cls, value: object) -> object:
-        if isinstance(value, bool) or isinstance(value, float):
-            raise ValueError("quantity must be an integer")
-        return value
+    quantity: StrictInt = Field(ge=1, le=5)
 
 
 class OrderCreate(BaseModel):
