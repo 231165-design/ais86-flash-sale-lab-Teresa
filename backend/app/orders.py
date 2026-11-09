@@ -10,9 +10,11 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .db import CAMPAIGN, utcnow
+from .db import CAMPAIGN, PUBLIC_DATASET, utcnow
 from .events import build_order_created_event, iso8601
-from .models import Order, OrderItem, Outbox, Product
+from .billing import requeue_task
+from .config import Settings
+from .models import BillingTask, Order, OrderItem, Outbox, Product
 from .schemas import OrderCreate
 from .security import (
     ApiError,
@@ -178,6 +180,22 @@ async def _create_or_replay(
             )
         )
 
+        # Asegura que el pedido exista en BD antes de crear su tarea de facturación (FK)
+        await session.flush()
+
+        if dataset_id == PUBLIC_DATASET:
+            session.add(
+                BillingTask(
+                    order_id=order_id,
+                    dataset_id=dataset_id,
+                    status="pending",
+                    attempts=0,
+                    next_attempt_at=created_at,
+                    created_at=created_at,
+                    updated_at=created_at,
+                )
+            )
+
         await session.flush()
         return snapshot
 
@@ -260,3 +278,61 @@ async def get_order(
     snapshot = dict(order.snapshot)
     snapshot["notification_status"] = order.notification_status
     return JSONResponse(content=snapshot)
+
+
+def _billing_view(order_id: uuid.UUID, task: BillingTask | None, settings: Settings) -> dict[str, Any]:
+    if task is None:
+        return {
+            "order_id": str(order_id),
+            "billing_status": "not_requested",
+            "configured": settings.billing_configured,
+        }
+    return {
+        "order_id": str(order_id),
+        "billing_status": task.status,
+        "invoice_id": task.invoice_id,
+        "invoice_number": task.invoice_number,
+        "attempts": task.attempts,
+        "last_error": task.last_error,
+        "configured": settings.billing_configured,
+    }
+
+
+@router.get("/api/v1/orders/{order_id}/billing")
+async def get_order_billing(
+    order_id: str,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+    context: DatasetContext = Depends(dataset_context),
+) -> JSONResponse:
+    try:
+        identifier = uuid.UUID(order_id)
+    except (ValueError, AttributeError, TypeError):
+        raise ApiError(404, "NOT_FOUND", "Order not found") from None
+
+    order = await session.get(Order, identifier)
+    if order is None or order.dataset_id != context.dataset_id:
+        raise ApiError(404, "NOT_FOUND", "Order not found")
+    task = await session.get(BillingTask, identifier)
+    return JSONResponse(content=_billing_view(identifier, task, request.app.state.settings))
+
+
+@router.post("/api/v1/orders/{order_id}/billing/retry")
+async def retry_order_billing(
+    order_id: str,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+    context: DatasetContext = Depends(dataset_context),
+) -> JSONResponse:
+    try:
+        identifier = uuid.UUID(order_id)
+    except (ValueError, AttributeError, TypeError):
+        raise ApiError(404, "NOT_FOUND", "Order not found") from None
+
+    task = await requeue_task(session, identifier, context.dataset_id)
+    if task is None:
+        raise ApiError(404, "NOT_FOUND", "Billing task not found")
+    return JSONResponse(
+        status_code=202,
+        content=_billing_view(identifier, task, request.app.state.settings),
+    )

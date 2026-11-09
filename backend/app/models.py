@@ -85,6 +85,29 @@ class OrderItem(Base):
     unit_price_cents: Mapped[int] = mapped_column(Integer, nullable=False)
 
 
+class BillingTask(Base):
+    """Estado local de facturación de un pedido (no es notification_status)."""
+
+    __tablename__ = "billing_tasks"
+
+    order_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("orders.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    dataset_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="pending")
+    attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    invoice_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    invoice_number: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    last_error: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    next_attempt_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+
+    __table_args__ = (Index("ix_billing_status_next", "status", "next_attempt_at"),)
+
+
 class Outbox(Base):
     __tablename__ = "outbox"
 

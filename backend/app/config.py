@@ -26,6 +26,12 @@ class Settings(BaseSettings):
     rate_limit_api_per_minute: int = Field(default=600, ge=1, le=100000)
     rate_limit_orders_per_minute: int = Field(default=240, ge=1, le=100000)
 
+    billing_base_url: str = ""
+    billing_token: SecretStr = SecretStr("")
+    billing_timeout_seconds: float = Field(default=15.0, ge=1.0, le=60.0)
+    billing_max_auto_attempts: int = Field(default=2, ge=1, le=5)
+    billing_retry_seconds: float = Field(default=10.0, ge=1.0, le=3600.0)
+
     stream_name: str = "flash:orders"
     consumer_group: str = "notifications-v1"
     stream_maxlen: int = Field(default=10000, ge=1000, le=1000000)
@@ -79,6 +85,20 @@ class Settings(BaseSettings):
         if not value:
             raise ValueError("INSTANCE_ID must not be empty")
         return value
+
+    @field_validator("billing_base_url")
+    @classmethod
+    def normalize_billing_base_url(cls, value: str) -> str:
+        return value.strip().rstrip("/")
+
+    def billing_token_value(self) -> str:
+        return self.billing_token.get_secret_value().strip()
+
+    @property
+    def billing_configured(self) -> bool:
+        url = self.billing_base_url
+        secure = url.startswith("https://") or url.startswith("http://127.0.0.1:")
+        return bool(url) and secure and bool(self.billing_token_value())
 
     def lab_key_value(self) -> str:
         return self.lab_key.get_secret_value()
