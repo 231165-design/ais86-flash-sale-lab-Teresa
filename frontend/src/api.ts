@@ -1,4 +1,6 @@
 import type {
+  Billing,
+  BillingStatus,
   Catalog,
   Campaign,
   NotificationStatus,
@@ -51,6 +53,12 @@ function isInteger(value: unknown): value is number {
 
 function isNotificationStatus(value: unknown): value is NotificationStatus {
   return value === 'pending' || value === 'sent' || value === 'failed';
+}
+
+function isBillingStatus(value: unknown): value is BillingStatus {
+  return (
+    value === 'not_requested' || value === 'pending' || value === 'issued' || value === 'failed'
+  );
 }
 
 function invalidResponse(): ApiError {
@@ -156,6 +164,19 @@ function parseOrder(value: unknown): Order {
     items: value.items.map(parseOrderLine),
     total_cents: readInteger(value, 'total_cents', 0),
     created_at: createdAt
+  };
+}
+
+function parseBilling(value: unknown): Billing {
+  if (!isRecord(value) || !isBillingStatus(value.billing_status)) {
+    throw invalidResponse();
+  }
+  const number = value.invoice_number;
+  return {
+    order_id: readString(value, 'order_id'),
+    billing_status: value.billing_status,
+    invoice_number: typeof number === 'string' && number.length > 0 ? number : null,
+    configured: value.configured === true
   };
 }
 
@@ -286,6 +307,19 @@ export async function createOrder(
 export async function fetchOrder(id: string, signal?: AbortSignal): Promise<Order> {
   const response = await request(`/api/v1/orders/${encodeURIComponent(id)}`, { signal });
   return parseOrder(response.payload);
+}
+
+export async function fetchBilling(id: string, signal?: AbortSignal): Promise<Billing> {
+  const response = await request(`/api/v1/orders/${encodeURIComponent(id)}/billing`, { signal });
+  return parseBilling(response.payload);
+}
+
+export async function retryBilling(id: string, signal?: AbortSignal): Promise<Billing> {
+  const response = await request(`/api/v1/orders/${encodeURIComponent(id)}/billing/retry`, {
+    method: 'POST',
+    signal
+  });
+  return parseBilling(response.payload);
 }
 
 export function friendlyError(error: unknown, context: 'catalog' | 'create' | 'order'): FriendlyError {

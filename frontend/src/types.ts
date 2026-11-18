@@ -49,3 +49,12 @@ export interface OrderRequestBody {
     quantity: number;
   }>;
 }
+
+export type BillingStatus = 'not_requested' | 'pending' | 'issued' | 'failed';
+
+export interface Billing {
+  order_id: string;
+  billing_status: BillingStatus;
+  invoice_number: string | null;
+  configured: boolean;
+}

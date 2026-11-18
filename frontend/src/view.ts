@@ -9,10 +9,11 @@ import {
 import { el, icon } from './dom';
 import { formatDateTime, formatMoney } from './format';
 import { productImage } from './shell';
-import type { CartLine, Catalog, NotificationStatus, Order, Product } from './types';
+import type { Billing, CartLine, Catalog, NotificationStatus, Order, Product } from './types';
 
 export type CatalogState = 'loading' | 'ready' | 'error';
 export type PollState = 'idle' | 'polling' | 'timeout' | 'error';
+export type BillingState = 'idle' | 'polling' | 'timeout' | 'error';
 
 export interface CartPanelContext {
   catalog: Catalog | null;
@@ -482,7 +483,9 @@ function stockNote(
 export function receiptPanelNodes(
   order: Order | null,
   pollState: PollState,
-  pollMessage: string
+  pollMessage: string,
+  billing: Billing | null = null,
+  billingState: BillingState = 'idle'
 ): Node[] {
   if (!order) {
     const wrapper = el('div', { class: 'panel-message' });
@@ -578,6 +581,7 @@ export function receiptPanelNodes(
     banner,
     idBlock,
     notification,
+    billingNode(billing, billingState),
     el('h3', { class: 'section-label' }, 'Productos'),
     items,
     total,
@@ -633,6 +637,64 @@ export function notificationNode(
     }
   }
 
+  return wrapper;
+}
+
+export function billingNode(billing: Billing | null, state: BillingState): HTMLElement {
+  let tone: NotificationStatus = 'pending';
+  let label = 'Generando comprobante';
+  let detail = 'El comprobante de demostración se está generando.';
+  let canRetry = false;
+  let canRefresh = false;
+
+  if (billing) {
+    if (billing.billing_status === 'issued') {
+      tone = 'sent';
+      label = 'Comprobante emitido';
+      detail = billing.invoice_number
+        ? `Número ${billing.invoice_number}. Comprobante interno de demostración: no es una factura electrónica ni implica un cobro.`
+        : 'Comprobante interno de demostración emitido.';
+    } else if (billing.billing_status === 'failed') {
+      tone = 'failed';
+      label = 'Comprobante pendiente de reintento';
+      detail = 'No se pudo emitir el comprobante todavía. El pedido sigue confirmado.';
+      canRetry = true;
+    } else if (billing.billing_status === 'not_requested') {
+      label = 'Sin comprobante';
+      detail = 'Este pedido no genera comprobante de demostración.';
+    } else if (!billing.configured) {
+      label = 'Facturación no configurada';
+      detail = 'Este servidor todavía no tiene configurado el servicio de comprobantes.';
+    } else if (state !== 'polling') {
+      detail = 'El comprobante sigue pendiente. Puedes consultar de nuevo en unos segundos.';
+      canRefresh = true;
+    }
+  } else if (state === 'error' || state === 'timeout') {
+    detail = 'No pudimos consultar el comprobante. Puedes intentarlo de nuevo.';
+    canRefresh = true;
+  }
+
+  const wrapper = el('div', {
+    class: `notice notice-${tone}`,
+    role: 'status',
+    'aria-live': 'polite',
+    'data-receipt-billing': ''
+  });
+  wrapper.append(
+    el(
+      'div',
+      { class: 'notice-head' },
+      el('span', { class: `status-dot status-dot-${tone}`, 'aria-hidden': 'true' }),
+      el('p', { class: 'notice-title' }, label)
+    ),
+    el('p', { class: 'notice-text' }, detail)
+  );
+  if (canRetry) {
+    wrapper.append(actionButton('retry-billing', 'Reintentar comprobante', 'refresh'));
+  }
+  if (canRefresh) {
+    wrapper.append(actionButton('poll-billing', 'Consultar de nuevo', 'refresh'));
+  }
   return wrapper;
 }
 
