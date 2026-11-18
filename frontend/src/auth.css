@@ -1,0 +1,160 @@
+/* Login: estilos propios. Reutiliza las variables de styles.css (--ink, --line, --blue...). */
+
+.auth-nav[hidden] {
+  display: none;
+}
+
+.auth-nav {
+  gap: 8px;
+}
+
+.auth-avatar {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--blue);
+  color: #ffffff;
+  font-size: 0.8rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.auth-nav-name {
+  max-width: 9ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.auth-providers {
+  display: grid;
+  gap: 10px;
+  margin: 16px 0;
+}
+
+.auth-account {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 8px 16px;
+  margin: 12px 0 20px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+}
+
+.auth-account dt {
+  color: var(--ink-muted);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.auth-account dd {
+  margin: 0;
+  color: var(--ink);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.auth-error {
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.auth-orders {
+  display: grid;
+  gap: 10px;
+  margin: 12px 0 16px;
+}
+
+.auth-order {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+}
+
+.auth-order summary {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 12px;
+  padding: 12px 14px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.auth-order summary::-webkit-details-marker {
+  display: none;
+}
+
+.auth-order-date {
+  color: var(--ink-muted);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.auth-order-total {
+  text-align: right;
+}
+
+.auth-badge {
+  grid-column: 1 / -1;
+  justify-self: start;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--ice);
+  color: var(--ink-soft);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.auth-badge-issued {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.auth-badge-pending {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+
+.auth-badge-failed {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.auth-order-detail {
+  padding: 0 14px 14px;
+  border-top: 1px solid var(--line);
+}
+
+.auth-order-id {
+  margin: 10px 0 6px;
+  color: var(--ink-muted);
+  font-size: 0.78rem;
+  overflow-wrap: anywhere;
+}
+
+.auth-order-lines {
+  margin: 0 0 8px;
+  padding-left: 18px;
+}
+
+.auth-order-invoice {
+  margin: 0;
+  font-weight: 800;
+}
+
+.auth-refresh {
+  margin-bottom: 10px;
+}
+
+@media (max-width: 560px) {
+  .auth-nav-name {
+    display: none;
+  }
+}

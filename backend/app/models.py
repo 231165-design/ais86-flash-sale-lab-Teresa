@@ -152,3 +152,61 @@ class Notification(Base):
         UniqueConstraint("dataset_id", "order_id", name="uq_notifications_dataset_order"),
         Index("ix_notifications_dataset", "dataset_id"),
     )
+
+
+class User(Base):
+    """Usuario autenticado con un proveedor externo (Google, GitHub...)."""
+
+    __tablename__ = "users"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True)
+    provider: Mapped[str] = mapped_column(String(32), nullable=False)
+    provider_user_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    email: Mapped[str] = mapped_column(String(320), nullable=False)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+    last_login_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+
+    __table_args__ = (
+        UniqueConstraint("provider", "provider_user_id", name="uq_users_provider_subject"),
+    )
+
+
+class AuthSession(Base):
+    """Sesión de login. Se guarda solo el hash SHA-256 del token que viaja en la cookie."""
+
+    __tablename__ = "auth_sessions"
+
+    token_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+    __table_args__ = (
+        Index("ix_auth_sessions_user", "user_id"),
+        Index("ix_auth_sessions_expires", "expires_at"),
+    )
+
+
+class UserOrder(Base):
+    """Relación pedido -> usuario. El comprobante se alcanza por billing_tasks.order_id."""
+
+    __tablename__ = "user_orders"
+
+    order_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("orders.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+
+    __table_args__ = (Index("ix_user_orders_user_created", "user_id", "created_at"),)

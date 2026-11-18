@@ -12,6 +12,7 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.staticfiles import StaticFiles
 
+from .auth import router as auth_router
 from .config import get_settings
 from .db import Database
 from .events import create_redis
@@ -59,6 +60,7 @@ app = FastAPI(
 
 app.add_middleware(HardeningMiddleware, settings=settings)
 app.include_router(orders_router)
+app.include_router(auth_router)
 app.include_router(lab_router)
 
 

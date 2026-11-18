@@ -148,6 +148,8 @@ async def _create_or_replay(
             snapshot=snapshot,
         )
         session.add(order)
+        # Guardar primero el pedido: OrderItem y BillingTask tienen FK hacia orders.
+        await session.flush()
 
         for item in items_out:
             session.add(
@@ -179,9 +181,6 @@ async def _create_or_replay(
                 created_at=created_at,
             )
         )
-
-        # Asegura que el pedido exista en BD antes de crear su tarea de facturación (FK)
-        await session.flush()
 
         if dataset_id == PUBLIC_DATASET:
             session.add(

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+import hmac
 import os
 import socket
 import uuid
@@ -31,6 +33,15 @@ class Settings(BaseSettings):
     billing_timeout_seconds: float = Field(default=15.0, ge=1.0, le=60.0)
     billing_max_auto_attempts: int = Field(default=2, ge=1, le=5)
     billing_retry_seconds: float = Field(default=10.0, ge=1.0, le=3600.0)
+
+    # --- Login (OAuth) ---
+    public_base_url: str = "http://localhost:8019"
+    auth_secret: SecretStr = SecretStr("")
+    session_ttl_seconds: int = Field(default=604800, ge=300, le=2592000)
+    google_client_id: str = ""
+    google_client_secret: SecretStr = SecretStr("")
+    github_client_id: str = ""
+    github_client_secret: SecretStr = SecretStr("")
 
     stream_name: str = "flash:orders"
     consumer_group: str = "notifications-v1"
@@ -90,6 +101,23 @@ class Settings(BaseSettings):
     @classmethod
     def normalize_billing_base_url(cls, value: str) -> str:
         return value.strip().rstrip("/")
+
+    @field_validator("public_base_url")
+    @classmethod
+    def normalize_public_base_url(cls, value: str) -> str:
+        value = value.strip().rstrip("/")
+        if not (value.startswith("https://") or value.startswith("http://")):
+            raise ValueError("PUBLIC_BASE_URL must start with http:// or https://")
+        return value
+
+    @property
+    def cookie_secure(self) -> bool:
+        return self.public_base_url.startswith("https://")
+
+    def auth_key(self) -> bytes:
+        """Clave para firmar cookies. Usa AUTH_SECRET; si no existe, la deriva de LAB_KEY."""
+        base = self.auth_secret.get_secret_value().strip() or self.lab_key_value()
+        return hmac.new(base.encode("utf-8"), b"flash-auth-v1", hashlib.sha256).digest()
 
     def billing_token_value(self) -> str:
         return self.billing_token.get_secret_value().strip()

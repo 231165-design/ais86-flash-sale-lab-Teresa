@@ -3,11 +3,17 @@ x-app: &app
   build: .
   image: ais86-flash:s09
   environment:
-    DATABASE_URL: postgresql+psycopg://flash:${POSTGRES_PASSWORD:-}@db:5432/flash
+    DATABASE_URL: "${DATABASE_URL:-postgresql+psycopg://flash:${POSTGRES_PASSWORD:-}@db:5432/flash}"
     REDIS_URL: redis://:${REDIS_PASSWORD:-}@redis:6379/0
     LAB_KEY: ${LAB_KEY:-}
     BILLING_BASE_URL: ${BILLING_BASE_URL:-}
     BILLING_TOKEN: ${BILLING_TOKEN:-}
+    PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:8019}
+    AUTH_SECRET: ${AUTH_SECRET:-}
+    GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+    GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+    GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
+    GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
   init: true
   restart: unless-stopped
   cap_drop: [ALL]
