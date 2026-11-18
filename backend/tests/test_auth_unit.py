@@ -22,6 +22,10 @@ def make_settings(**overrides: str) -> Settings:
         "redis_url": "redis://localhost:6379/0",
         "lab_key": "x" * 40,
         "public_base_url": "http://localhost:8019/",
+        "google_client_id": "",
+        "google_client_secret": "",
+        "github_client_id": "",
+        "github_client_secret": "",
     }
     base.update(overrides)
     return Settings(**base)
